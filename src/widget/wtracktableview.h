@@ -10,6 +10,7 @@
 #include "library/trackmodel.h" // Can't forward declare enums
 #include "track/track.h"
 #include "util/duration.h"
+#include "widget/wcolorpickeraction.h"
 #include "widget/wlibrarytableview.h"
 
 class ControlProxy;
@@ -31,6 +32,7 @@ class WTrackTableView : public WLibraryTableView {
             QWidget* parent,
             UserSettingsPointer pConfig,
             TrackCollectionManager* pTrackCollectionManager,
+            double backgroundColorOpacity,
             bool sorting);
     ~WTrackTableView() override;
     void contextMenuEvent(QContextMenuEvent * event) override;
@@ -44,6 +46,10 @@ class WTrackTableView : public WLibraryTableView {
     void setSelectedTracks(const QList<TrackId>& tracks);
     void saveCurrentVScrollBarPos();
     void restoreCurrentVScrollBarPos();
+
+    double getBackgroundColorOpacity() const {
+        return m_backgroundColorOpacity;
+    }
 
   public slots:
     void loadTrackModel(QAbstractItemModel* model);
@@ -80,6 +86,7 @@ class WTrackTableView : public WLibraryTableView {
     void slotLockBpm();
     void slotUnlockBpm();
     void slotScaleBpm(int);
+    void slotColorPicked(mixxx::RgbColor::optional_t color);
 
     void slotClearBeats();
     void slotClearPlayCount();
@@ -131,6 +138,8 @@ class WTrackTableView : public WLibraryTableView {
 
     TrackCollectionManager* const m_pTrackCollectionManager;
 
+    const double m_backgroundColorOpacity;
+
     QScopedPointer<DlgTrackInfo> m_pTrackInfo;
     QScopedPointer<DlgTagFetcher> m_pTagFetcher;
 
@@ -153,6 +162,7 @@ class WTrackTableView : public WLibraryTableView {
     QMenu *m_pMetadataUpdateExternalCollectionsMenu;
     QMenu *m_pClearMetadataMenu;
     QMenu *m_pBPMMenu;
+    QMenu *m_pColorMenu;
 
 
     WCoverArtMenu* m_pCoverMenu;
@@ -193,6 +203,9 @@ class WTrackTableView : public WLibraryTableView {
     QAction *m_pBpmThreeFourthsAction;
     QAction *m_pBpmFourThirdsAction;
     QAction *m_pBpmThreeHalvesAction;
+
+    // Track color
+    WColorPickerAction *m_pColorPickerAction;
 
     // Clear track metadata actions
     QAction* m_pClearBeatsAction;
