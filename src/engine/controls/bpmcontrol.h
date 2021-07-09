@@ -1,29 +1,35 @@
-#ifndef BPMCONTROL_H
-#define BPMCONTROL_H
+#pragma once
 
 #include <gtest/gtest_prod.h>
 
 #include "control/controlobject.h"
+#include "control/controlproxy.h"
 #include "engine/controls/enginecontrol.h"
 #include "engine/sync/syncable.h"
+#include "track/beats.h"
 #include "util/tapfilter.h"
 
 class ControlObject;
 class ControlLinPotmeter;
-class ControlProxy;
 class ControlPushButton;
 class EngineBuffer;
 class SyncControl;
 
+/// BpmControl is an EngineControl that manages the bpm and beat distance of
+/// tracks.  It understands the tempo of the underlying track and the musical
+/// position of the playhead.
 class BpmControl : public EngineControl {
     Q_OBJECT
 
   public:
-    BpmControl(QString group, UserSettingsPointer pConfig);
+    BpmControl(const QString& group, UserSettingsPointer pConfig);
     ~BpmControl() override;
 
-    double getBpm() const;
-    double getLocalBpm() const { return m_pLocalBpm ? m_pLocalBpm->get() : 0.0; }
+    mixxx::Bpm getBpm() const;
+    mixxx::Bpm getLocalBpm() const {
+        return m_pLocalBpm ? mixxx::Bpm(m_pLocalBpm->get()) : mixxx::Bpm();
+    }
+
     // When in master sync mode, ratecontrol calls calcSyncedRate to figure out
     // how fast the track should play back.  The returned rate is usually just
     // the correct pitch to match bpms.  The usertweak argument represents
@@ -36,12 +42,19 @@ class BpmControl : public EngineControl {
     double getNearestPositionInPhase(double dThisPosition, bool respectLoops, bool playing);
     double getBeatMatchPosition(double dThisPosition, bool respectLoops, bool playing);
     double getPhaseOffset(double dThisPosition);
+    /// getBeatDistance is adjusted to include the user offset so it's
+    /// transparent to other decks.
     double getBeatDistance(double dThisPosition) const;
+    double getUserOffset() const {
+        return m_dUserOffset.getValue();
+    }
 
     void setTargetBeatDistance(double beatDistance);
-    void setInstantaneousBpm(double instantaneousBpm);
+    void updateInstantaneousBpm(double instantaneousBpm);
     void resetSyncAdjustment();
-    double updateLocalBpm();
+    mixxx::Bpm updateLocalBpm();
+    /// updateBeatDistance is adjusted to include the user offset so
+    /// it's transparent to other decks.
     double updateBeatDistance();
 
     void collectFeatures(GroupFeatureState* pGroupFeatures) const;
@@ -50,12 +63,12 @@ class BpmControl : public EngineControl {
     // next beat, the current beat length, and the beat ratio (how far dPosition
     // lies within the current beat). Returns false if a previous or next beat
     // does not exist. NULL arguments are safe and ignored.
-    static bool getBeatContext(const BeatsPointer& pBeats,
-                               const double dPosition,
-                               double* dpPrevBeat,
-                               double* dpNextBeat,
-                               double* dpBeatLength,
-                               double* dpBeatPercentage);
+    static bool getBeatContext(const mixxx::BeatsPointer& pBeats,
+            const double dPosition,
+            double* dpPrevBeat,
+            double* dpNextBeat,
+            double* dpBeatLength,
+            double* dpBeatPercentage);
 
     // Alternative version that works if the next and previous beat positions
     // are already known.
@@ -74,9 +87,9 @@ class BpmControl : public EngineControl {
     double getRateRatio() const;
     void notifySeek(double dNewPlaypos) override;
     void trackLoaded(TrackPointer pNewTrack) override;
+    void trackBeatsUpdated(mixxx::BeatsPointer pBeats) override;
 
   private slots:
-    void slotFileBpmChanged(double);
     void slotAdjustBeatsFaster(double);
     void slotAdjustBeatsSlower(double);
     void slotTranslateBeatsEarlier(double);
@@ -88,7 +101,6 @@ class BpmControl : public EngineControl {
     void slotBpmTap(double);
     void slotUpdateRateSlider(double v = 0.0);
     void slotUpdateEngineBpm(double v = 0.0);
-    void slotUpdatedTrackBeats();
     void slotBeatsTranslate(double);
     void slotBeatsTranslateMatchAlignment(double);
 
@@ -101,6 +113,7 @@ class BpmControl : public EngineControl {
     }
     bool syncTempo();
     double calcSyncAdjustment(bool userTweakingSync);
+    void adjustBeatsBpm(double deltaBpm);
 
     friend class SyncControl;
 
@@ -120,8 +133,6 @@ class BpmControl : public EngineControl {
     ControlProxy* m_pLoopStartPosition;
     ControlProxy* m_pLoopEndPosition;
 
-    // The current loaded file's detected BPM
-    ControlObject* m_pFileBpm;
     // The average bpm around the current playposition;
     ControlObject* m_pLocalBpm;
     ControlPushButton* m_pAdjustBeatsFaster;
@@ -148,6 +159,9 @@ class BpmControl : public EngineControl {
 
     ControlProxy* m_pThisBeatDistance;
     ControlValueAtomic<double> m_dSyncTargetBeatDistance;
+    // The user offset is a beat distance percentage value that the user has tweaked a deck
+    // to bring it in sync with the other decks. This value is added to the reported beat
+    // distance to get the virtual beat distance used for sync.
     ControlValueAtomic<double> m_dUserOffset;
     QAtomicInt m_resetSyncAdjustment;
     ControlProxy* m_pSyncMode;
@@ -158,12 +172,9 @@ class BpmControl : public EngineControl {
     double m_dSyncInstantaneousBpm;
     double m_dLastSyncAdjustment;
 
-    // objects below are written from an engine worker thread
-    TrackPointer m_pTrack;
-    BeatsPointer m_pBeats;
+    // m_pBeats is written from an engine worker thread
+    mixxx::BeatsPointer m_pBeats;
 
-    FRIEND_TEST(EngineSyncTest, UserTweakBeatDistance);
+    FRIEND_TEST(EngineSyncTest, UserTweakPreservedInSeek);
+    FRIEND_TEST(EngineSyncTest, FollowerUserTweakPreservedInMasterChange);
 };
-
-
-#endif // BPMCONTROL_H

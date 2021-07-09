@@ -1,10 +1,11 @@
 #pragma once
 
 #include <QTreeWidgetItem>
+#include <memory>
 
-#include "preferences/usersettings.h"
 #include "controllers/ui_dlgprefcontrollersdlg.h"
-#include "preferences/dlgpreferencepage.h"
+#include "preferences/dialog/dlgpreferencepage.h"
+#include "preferences/usersettings.h"
 
 class DlgPreferences;
 class DlgPrefController;
@@ -18,31 +19,37 @@ class DlgPrefControllers : public DlgPreferencePage, public Ui::DlgPrefControlle
     Q_OBJECT
   public:
     DlgPrefControllers(DlgPreferences* pDlgPreferences,
-                       UserSettingsPointer pConfig,
-                       ControllerManager* pControllerManager,
-                       QTreeWidgetItem* pControllerTreeItem);
+            UserSettingsPointer pConfig,
+            std::shared_ptr<ControllerManager> pControllerManager,
+            QTreeWidgetItem* pControllersRootItem);
     virtual ~DlgPrefControllers();
 
     bool handleTreeItemClick(QTreeWidgetItem* clickedItem);
+    QUrl helpUrl() const override;
 
   public slots:
-    void slotUpdate();
-    void slotApply();
-    void slotCancel();
+    /// Called when the preference dialog (not this page) is shown to the user.
+    void slotUpdate() override;
+    /// Called when the user clicks the global "Apply" button.
+    void slotApply() override;
+    /// Called when the user clicks the global "Cancel" button.
+    void slotCancel() override;
+    /// Called when the user clicks the global "Reset to Defaults" button.
+    void slotResetToDefaults() override;
 
   private slots:
     void rescanControllers();
     void slotHighlightDevice(DlgPrefController* dialog, bool enabled);
-    void slotOpenLocalFile(const QString& file);
 
   private:
     void destroyControllerWidgets();
     void setupControllerWidgets();
+    void openLocalFile(const QString& file);
 
     DlgPreferences* m_pDlgPreferences;
     UserSettingsPointer m_pConfig;
-    ControllerManager* m_pControllerManager;
-    QTreeWidgetItem* m_pControllerTreeItem;
-    QList<DlgPrefController*> m_controllerWindows;
+    std::shared_ptr<ControllerManager> m_pControllerManager;
+    QTreeWidgetItem* m_pControllersRootItem;
+    QList<DlgPrefController*> m_controllerPages;
     QList<QTreeWidgetItem*> m_controllerTreeItems;
 };

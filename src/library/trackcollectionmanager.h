@@ -3,14 +3,15 @@
 #include <QDir>
 #include <QList>
 #include <QSet>
-
 #include <memory>
 
 #include "library/relocatedtrack.h"
 #include "preferences/usersettings.h"
 #include "track/globaltrackcache.h"
 #include "util/db/dbconnectionpool.h"
+#include "util/fileinfo.h"
 #include "util/parented_ptr.h"
+#include "util/thread_affinity.h"
 
 class LibraryScanner;
 class TrackCollection;
@@ -36,35 +37,50 @@ class TrackCollectionManager: public QObject,
             deleteTrackFn_t deleteTrackForTestingFn = nullptr);
     ~TrackCollectionManager() override;
 
-    TrackCollection* internalCollection() {
+    TrackCollection* internalCollection() const {
+        DEBUG_ASSERT_QOBJECT_THREAD_AFFINITY(this);
         return m_pInternalCollection;
     }
 
     const QList<ExternalTrackCollection*>& externalCollections() const {
+        DEBUG_ASSERT_QOBJECT_THREAD_AFFINITY(this);
         return m_externalCollections;
     }
 
-    bool hideTracks(const QList<TrackId>& trackIds);
-    bool unhideTracks(const QList<TrackId>& trackIds);
-    void hideAllTracks(const QDir& rootDir);
+    TrackPointer getTrackById(
+            TrackId trackId) const;
+    TrackPointer getTrackByRef(
+            const TrackRef& trackRef) const;
+    QList<TrackId> resolveTrackIdsFromUrls(
+            const QList<QUrl>& urls,
+            bool addMissing) const;
+    QList<TrackId> resolveTrackIdsFromLocations(
+            const QList<QString>& locations) const;
 
-    void purgeTracks(const QList<TrackRef>& trackRefs);
-    void purgeAllTracks(const QDir& rootDir);
+    bool hideTracks(const QList<TrackId>& trackIds) const;
+    bool unhideTracks(const QList<TrackId>& trackIds) const;
+    void hideAllTracks(const QDir& rootDir) const;
 
-    bool addDirectory(const QString& dir);
-    bool removeDirectory(const QString& dir);
-    void relocateDirectory(QString oldDir, QString newDir);
+    void purgeTracks(const QList<TrackRef>& trackRefs) const;
+    void purgeAllTracks(const QDir& rootDir) const;
+
+    bool addDirectory(const mixxx::FileInfo& newDir) const;
+    bool removeDirectory(const mixxx::FileInfo& oldDir) const;
+    void relocateDirectory(const QString& oldDir, const QString& newDir) const;
 
     TrackPointer getOrAddTrack(
             const TrackRef& trackRef,
-            bool* pAlreadyInLibrary = nullptr);
+            bool* pAlreadyInLibrary = nullptr) const;
 
     // Save the track in both the internal database and external collections.
     // Export of metadata is deferred until the track is evicted from the
     // cache to prevent file corruption due to concurrent access.
-    // Returns true if the track was dirty and has been saved, otherwise
-    // false.
-    bool saveTrack(const TrackPointer& pTrack);
+    enum class SaveTrackResult {
+        Saved,
+        Skipped, // e.g. unmodified or missing/deleted tracks
+        Failed,
+    };
+    SaveTrackResult saveTrack(const TrackPointer& pTrack) const;
 
   signals:
     void libraryScanStarted();
@@ -74,11 +90,11 @@ class TrackCollectionManager: public QObject,
     void startLibraryScan();
     void stopLibraryScan();
 
-    void slotScanTrackAdded(TrackPointer pTrack);
-    void slotScanTracksUpdated(QSet<TrackId> updatedTrackIds);
-    void slotScanTracksRelocated(QList<RelocatedTrack> relocatedTracks);
-
   private:
+    void afterTrackAdded(const TrackPointer& pTrack) const;
+    void afterTracksUpdated(const QSet<TrackId>& updatedTrackIds) const;
+    void afterTracksRelocated(const QList<RelocatedTrack>& relocatedTracks) const;
+
     // Callback for GlobalTrackCache
     void saveEvictedTrack(Track* pTrack) noexcept override;
 
@@ -87,9 +103,9 @@ class TrackCollectionManager: public QObject,
         Immediate,
         Deferred,
     };
-    void saveTrack(
+    SaveTrackResult saveTrack(
             Track* pTrack,
-            TrackMetadataExportMode mode);
+            TrackMetadataExportMode mode) const;
     void exportTrackMetadata(
             Track* pTrack,
             TrackMetadataExportMode mode) const;

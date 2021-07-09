@@ -1,16 +1,16 @@
-// encoderopus.cpp
-// Create on August 15th 2017 by Palakis
+#include "encoder/encoderopus.h"
 
 #include <stdlib.h>
+
 #include <QByteArray>
 #include <QMapIterator>
+
+#include <QRandomGenerator>
 #include <QtGlobal>
 
 #include "encoder/encoderopussettings.h"
 #include "engine/sidechain/enginesidechain.h"
 #include "util/logger.h"
-
-#include "encoder/encoderopus.h"
 
 namespace {
 // From libjitsi's Opus encoder:
@@ -21,7 +21,7 @@ constexpr int kMaxOpusBufferSize = 1+1275;
 constexpr int kOpusFrameMs = 60;
 constexpr int kOpusChannelCount = 2;
 // Opus only supports 48 and 96 kHz samplerates
-constexpr int kMasterSamplerate = 48000;
+constexpr mixxx::audio::SampleRate kMasterSamplerate = mixxx::audio::SampleRate(48000);
 
 const mixxx::Logger kLogger("EncoderOpus");
 
@@ -63,17 +63,17 @@ int getSerial() {
 
     int serial;
     do {
-        serial = qrand();
-    } while(prevSerial == serial);
+        serial = static_cast<int>(QRandomGenerator::global()->generate());
+    } while (prevSerial == serial);
 
     prevSerial = serial;
     kLogger.debug() << "RETURNING SERIAL " << serial;
     return serial;
 }
-}
+} // namespace
 
 //static
-int EncoderOpus::getMasterSamplerate() {
+mixxx::audio::SampleRate EncoderOpus::getMasterSamplerate() {
     return kMasterSamplerate;
 }
 
@@ -90,7 +90,6 @@ EncoderOpus::EncoderOpus(EncoderCallback* pCallback)
     : m_bitrate(0),
       m_bitrateMode(0),
       m_channels(0),
-      m_samplerate(0),
       m_readRequired(0),
       m_pCallback(pCallback),
       m_fifoBuffer(EngineSideChain::SIDECHAIN_BUFFER_SIZE * kOpusChannelCount),
@@ -110,7 +109,8 @@ EncoderOpus::EncoderOpus(EncoderCallback* pCallback)
     // the Live Broadcasting implementation
 
     m_opusComments.insert("ENCODER", "mixxx/libopus");
-    ogg_stream_init(&m_oggStream, qrand());
+    int serial = static_cast<int>(QRandomGenerator::global()->generate());
+    ogg_stream_init(&m_oggStream, serial);
 }
 
 EncoderOpus::~EncoderOpus() {
@@ -137,10 +137,10 @@ void EncoderOpus::setEncoderSettings(const EncoderSettings& settings) {
     }
 }
 
-int EncoderOpus::initEncoder(int samplerate, QString errorMessage) {
-    Q_UNUSED(errorMessage);
+int EncoderOpus::initEncoder(mixxx::audio::SampleRate sampleRate, QString* pUserErrorMessage) {
+    Q_UNUSED(pUserErrorMessage);
 
-    if (samplerate != kMasterSamplerate) {
+    if (sampleRate != kMasterSamplerate) {
         kLogger.warning() << "initEncoder failed: samplerate not supported by Opus";
 
         const QString invalidSamplerateMessage = getInvalidSamplerateMessage();
@@ -153,10 +153,13 @@ int EncoderOpus::initEncoder(int samplerate, QString errorMessage) {
         ErrorDialogHandler::instance()->requestErrorDialog(props);
         return -1;
     }
-    m_samplerate = samplerate;
+    m_sampleRate = sampleRate;
+    DEBUG_ASSERT(m_sampleRate == 8000 || m_sampleRate == 12000 ||
+            m_sampleRate == 16000 || m_sampleRate == 24000 ||
+            m_sampleRate == 48000);
 
     int createResult = 0;
-    m_pOpus = opus_encoder_create(m_samplerate, m_channels, OPUS_APPLICATION_AUDIO, &createResult);
+    m_pOpus = opus_encoder_create(m_sampleRate, m_channels, OPUS_APPLICATION_AUDIO, &createResult);
 
     if (createResult != OPUS_OK) {
         kLogger.warning() << "opus_encoder_create failed:" << opusErrorString(createResult);
@@ -183,10 +186,7 @@ int EncoderOpus::initEncoder(int samplerate, QString errorMessage) {
         opus_encoder_ctl(m_pOpus, OPUS_SET_VBR_CONSTRAINT(0)); // Unconstrained VBR
     }
 
-    double samplingPeriodMs = ( 1.0 / ((double)m_samplerate) ) * 1000.0;
-    double samplesPerChannel = kOpusFrameMs / samplingPeriodMs;
-
-    m_readRequired = samplesPerChannel * m_channels;
+    m_readRequired = m_sampleRate * kOpusFrameMs;
     m_pFifoChunkBuffer = std::make_unique<mixxx::SampleBuffer>(m_readRequired);
     initStream();
 
@@ -230,7 +230,7 @@ void EncoderOpus::pushHeaderPacket() {
     frame.append(0x01);
 
     // Channel count (1 byte)
-    frame.append((unsigned char)m_channels);
+    frame.append(static_cast<unsigned char>(m_channels));
 
     // Pre-skip (2 bytes, little-endian)
     int preskip = 0;
@@ -242,7 +242,7 @@ void EncoderOpus::pushHeaderPacket() {
 
     // Sample rate (4 bytes, little endian)
     for (int x = 0; x < 4; x++) {
-        unsigned char samplerateByte = (m_samplerate >> (x*8)) & 0xFF;
+        unsigned char samplerateByte = (m_sampleRate >> (x * 8)) & 0xFF;
         frame.append(samplerateByte);
     }
 
@@ -432,8 +432,9 @@ void EncoderOpus::writePage(ogg_packet* pPacket) {
     if (m_header_write) {
         while (true) {
             int result = ogg_stream_flush(&m_oggStream, &m_oggPage);
-            if (result == 0)
+            if (result == 0) {
                 break;
+            }
 
             kLogger.debug() << "pushing headers to output";
             m_pCallback->write(m_oggPage.header, m_oggPage.body,

@@ -10,9 +10,9 @@
 class ColorPalette final {
   public:
     ColorPalette(
-            QString name,
-            QList<mixxx::RgbColor> colorList,
-            QList<int> colorIndicesByHotcue = {})
+            const QString& name,
+            const QList<mixxx::RgbColor>& colorList,
+            const QList<int>& colorIndicesByHotcue = {})
             : m_name(name),
               m_colorList(colorList),
               m_colorIndicesByHotcue(colorIndicesByHotcue) {
@@ -32,7 +32,9 @@ class ColorPalette final {
     }
 
     mixxx::RgbColor nextColor(mixxx::RgbColor color) const;
+    mixxx::RgbColor::optional_t nextColor(mixxx::RgbColor::optional_t color) const;
     mixxx::RgbColor previousColor(mixxx::RgbColor color) const;
+    mixxx::RgbColor::optional_t previousColor(mixxx::RgbColor::optional_t color) const;
     mixxx::RgbColor colorForHotcueIndex(unsigned int index) const;
 
     QList<mixxx::RgbColor>::const_iterator begin() const {
@@ -47,7 +49,7 @@ class ColorPalette final {
         return m_name;
     }
 
-    void setName(const QString name) {
+    void setName(const QString& name) {
         m_name = name;
     }
 

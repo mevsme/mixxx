@@ -118,7 +118,7 @@
             <SetVariable name="text">Intro &amp; Outro Cues</SetVariable>
             <SetVariable name="skinsetting">[Skin],show_intro_outro_cues</SetVariable>
           </Template>
-          
+
           <Template src="skin:../Deere/skinsettings_button.xml">
             <SetVariable name="TooltipId">show_vinylcontrol</SetVariable>
             <SetVariable name="text">Vinyl Control Options</SetVariable>
@@ -162,6 +162,12 @@
             <SetVariable name="TooltipId"></SetVariable>
             <SetVariable name="text">Crossfader</SetVariable>
             <SetVariable name="skinsetting">[Skin],show_xfader</SetVariable>
+          </Template>
+
+          <Template src="skin:../Deere/skinsettings_button.xml">
+            <SetVariable name="TooltipId"></SetVariable>
+            <SetVariable name="text">Large VU meter</SetVariable>
+            <SetVariable name="skinsetting">[Skin],large_vu</SetVariable>
           </Template>
 
         </Children>
@@ -301,10 +307,5 @@
       <Template src="skin:../Deere/spacer_v.xml"/>
 
     </Children>
-    <Connection>
-      <ConfigKey>[Master],skin_settings</ConfigKey>
-      <BindProperty>visible</BindProperty>
-    </Connection>
   </WidgetGroup>
 </Template>
-

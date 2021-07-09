@@ -5,8 +5,7 @@
  *      Author: Vittorio Colao
  *       */
 
-#ifndef ANALYZER_ANALYZERGAIN_H
-#define ANALYZER_ANALYZERGAIN_H
+#pragma once
 
 #include "analyzer/analyzer.h"
 #include "preferences/replaygainsettings.h"
@@ -16,13 +15,15 @@ class ReplayGain;
 class AnalyzerGain : public Analyzer {
   public:
     AnalyzerGain(UserSettingsPointer pConfig);
-    virtual ~AnalyzerGain();
+    ~AnalyzerGain() override;
 
     static bool isEnabled(const ReplayGainSettings& rgSettings) {
         return rgSettings.isAnalyzerEnabled(1);
     }
 
-    bool initialize(TrackPointer tio, int sampleRate, int totalSamples) override;
+    bool initialize(TrackPointer tio,
+            mixxx::audio::SampleRate sampleRate,
+            int totalSamples) override;
     bool processSamples(const CSAMPLE* pIn, const int iLen) override;
     void storeResults(TrackPointer tio) override;
     void cleanup() override;
@@ -34,5 +35,3 @@ class AnalyzerGain : public Analyzer {
     ReplayGain* m_pReplayGain;
     int m_iBufferSize;
 };
-
-#endif /* ANALYZER_ANALYZERGAIN_H */

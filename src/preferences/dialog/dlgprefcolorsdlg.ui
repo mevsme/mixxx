@@ -26,6 +26,37 @@
       <string>Colors</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="3" column="0">
+       <widget class="QLabel" name="labelHotcueDefaultColor">
+        <property name="text">
+         <string>Hotcue default color</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QPushButton" name="pushButtonReplaceCueColor">
+        <property name="text">
+         <string>Replace…</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="pushButtonEditHotcuePalette">
+        <property name="text">
+         <string>Edit…</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="comboBoxHotcueDefaultColor"/>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="pushButtonEditTrackPalette">
+        <property name="text">
+         <string>Edit…</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="1">
        <widget class="QComboBox" name="comboBoxHotcueColors">
         <property name="sizePolicy">
@@ -50,20 +81,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelHotcueDefaultColor">
-        <property name="text">
-         <string>Hotcue default color</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="pushButtonEditHotcuePalette">
-        <property name="text">
-         <string>Edit…</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="1">
        <widget class="QComboBox" name="comboBoxTrackColors">
         <property name="sizePolicy">
@@ -74,15 +91,15 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1" colspan="2">
-       <widget class="QComboBox" name="comboBoxHotcueDefaultColor"/>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="pushButtonEditTrackPalette">
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelLoopDefaultColor">
         <property name="text">
-         <string>Edit…</string>
+         <string>Loop default color</string>
         </property>
        </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="comboBoxLoopDefaultColor"/>
       </item>
      </layout>
     </widget>
@@ -103,6 +120,14 @@
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <tabstops>
+  <tabstop>comboBoxTrackColors</tabstop>
+  <tabstop>pushButtonEditTrackPalette</tabstop>
+  <tabstop>comboBoxHotcueColors</tabstop>
+  <tabstop>pushButtonEditHotcuePalette</tabstop>
+  <tabstop>comboBoxHotcueDefaultColor</tabstop>
+  <tabstop>pushButtonReplaceCueColor</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

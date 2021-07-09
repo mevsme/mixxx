@@ -1,17 +1,17 @@
 #include "library/scanner/importfilestask.h"
 
 #include "library/scanner/libraryscanner.h"
-#include "track/trackfile.h"
+#include "moc_importfilestask.cpp"
 #include "util/timer.h"
 
 ImportFilesTask::ImportFilesTask(LibraryScanner* pScanner,
-                                 const ScannerGlobalPointer scannerGlobal,
-                                 const QString& dirPath,
-                                 const bool prevHashExists,
-                                 const mixxx::cache_key_t newHash,
-                                 const QLinkedList<QFileInfo>& filesToImport,
-                                 const QLinkedList<QFileInfo>& possibleCovers,
-                                 SecurityTokenPointer pToken)
+        const ScannerGlobalPointer scannerGlobal,
+        const QString& dirPath,
+        const bool prevHashExists,
+        const mixxx::cache_key_t newHash,
+        const std::list<QFileInfo>& filesToImport,
+        const std::list<QFileInfo>& possibleCovers,
+        SecurityTokenPointer pToken)
         : ScannerTask(pScanner, scannerGlobal),
           m_dirPath(dirPath),
           m_prevHashExists(prevHashExists),
@@ -30,7 +30,7 @@ void ImportFilesTask::run() {
             return;
         }
 
-        const QString trackLocation(TrackFile(fileInfo).location());
+        const QString trackLocation(mixxx::FileInfo(fileInfo).location());
         //qDebug() << "ImportFilesTask::run" << trackLocation;
 
         // If the file does not exist in the database then add it. If it

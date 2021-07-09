@@ -1,21 +1,19 @@
 #pragma once
 
+#include <QObject>
+#include <QVector>
 #include <vector>
 
-#include <QObject>
-#include <QTime>
-#include <QVector>
-
-#include "util/singleton.h"
 #include "preferences/usersettings.h"
-#include "waveform/widgets/waveformwidgettype.h"
-#include "waveform/waveform.h"
-#include "skin/skincontext.h"
+#include "skin/legacy/skincontext.h"
 #include "util/performancetimer.h"
+#include "util/singleton.h"
+#include "waveform/waveform.h"
+#include "waveform/widgets/waveformwidgettype.h"
 
+class WVuMeter;
 class WWaveformViewer;
 class WaveformWidgetAbstract;
-class QTimer;
 class VSyncThread;
 class GuiTick;
 class VisualsManager;
@@ -64,8 +62,9 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
 
     bool setConfig(UserSettingsPointer config);
 
-    //creates the waveform widget and bind it to the viewer
-    //clean-up every thing if needed
+    /// Creates the waveform widget using the type set with setWidgetType
+    /// and binds it to the viewer.
+    /// Deletes older widget and resets positions to config defaults.
     bool setWaveformWidget(
             WWaveformViewer* viewer,
             const QDomElement &node,
@@ -83,10 +82,27 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
 
     bool isOpenGlShaderAvailable() const { return m_openGLShaderAvailable;}
 
+    /// Sets the widget type and saves it to configuration.
+    /// Returns false and sets EmtpyWaveform if type is invalid
     bool setWidgetType(WaveformWidgetType::Type type);
-    bool setWidgetTypeFromHandle(int handleIndex);
+    /// Changes the widget type to that loaded from config and recreates them.
+    /// Used as a workaround on Windows due to a problem with GL and QT 5.14.2
+    bool setWidgetTypeFromConfig();
+    /// Changes the widget type and recreates them. Used from the preferences
+    /// dialog.
+    bool setWidgetTypeFromHandle(int handleIndex, bool force = false);
     WaveformWidgetType::Type getType() const { return m_type;}
+    int getHandleIndex() {
+        return findHandleIndexFromType(m_type);
+    }
+    int findHandleIndexFromType(WaveformWidgetType::Type type);
 
+  protected:
+    bool setWidgetType(
+            WaveformWidgetType::Type type,
+            WaveformWidgetType::Type* pCurrentType);
+
+  public:
     void setDefaultZoom(double zoom);
     double getDefaultZoom() const { return m_defaultZoom;}
 
@@ -94,7 +110,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     int isZoomSync() const { return m_zoomSync;}
 
     void setDisplayBeatGridAlpha(int alpha);
-    int beatGridAlpha() const { return m_beatGridAlpha; }
+    int getBeatGridAlpha() const { return m_beatGridAlpha; }
 
     void setVisualGain(FilterIndex index, double gain);
     double getVisualGain(FilterIndex index) const;
@@ -106,7 +122,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     void getAvailableVSyncTypes(QList<QPair<int, QString > >* list);
     void destroyWidgets();
 
-    void addTimerListener(QWidget* pWidget);
+    void addTimerListener(WVuMeter* pWidget);
 
     void startVSync(GuiTick* pGuiTick, VisualsManager* pVisualsManager);
     void setVSyncType(int vsType);
@@ -125,6 +141,9 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     void renderSpinnies(VSyncThread*);
     void swapSpinnies();
 
+  public slots:
+    void slotSkinLoaded();
+
   protected:
     WaveformWidgetFactory();
     virtual ~WaveformWidgetFactory();
@@ -140,6 +159,8 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     WaveformWidgetAbstract* createWaveformWidget(WaveformWidgetType::Type type, WWaveformViewer* viewer);
     int findIndexOf(WWaveformViewer* viewer) const;
 
+    WaveformWidgetType::Type findTypeFromHandleIndex(int index);
+
     //All type of available widgets
 
     QVector<WaveformWidgetAbstractHandle> m_waveformWidgetHandles;
@@ -148,6 +169,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     std::vector<WaveformWidgetHolder> m_waveformWidgetHolders;
 
     WaveformWidgetType::Type m_type;
+    WaveformWidgetType::Type m_configType;
 
     UserSettingsPointer m_config;
 
